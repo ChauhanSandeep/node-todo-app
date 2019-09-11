@@ -1,0 +1,8 @@
+// 1. install mongo db from mongodb.com
+// 2. unzip the file in user directory and rename the folder as mongodb
+// 3. create one more folder mongo-data; this will act as the database.
+// 4. go to mongo/bin and run run mongod (./mongod --dbpath ~/mongo-data); this will start the mongo server
+// 5. in other tab run mongo (./mongo); now in terminal we can run mongo commands
+// 6. db.Todos.insert({text : 'Hello Mongo'}) -> to insert the data
+// 7. db.Todos.find() -> to fetch all the data
+// 8. Now install mongo 3t and create the local connection to get the same db in GUI
