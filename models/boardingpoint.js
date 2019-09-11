@@ -14,6 +14,14 @@ var BoardingPoint = mongoose.model('BoardingPoint', {
     isActive: {
         type: Boolean,
         default: false
+    },
+    lattitude: {
+        type: Number,
+        required: true
+    },
+    longitude: {
+        type: Number,
+        required: true
     }
 });
 

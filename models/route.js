@@ -5,17 +5,21 @@ var Route = mongoose.model('Route', {
         type: Number,
         required: true
     },
-    from: {
+    sourceId: {
         type: Number,
         required: true,
     },
-    to: {
+    destinationId: {
         type: Number,
         required: true,
     },
-    parent: {
+    groupId: {
         type : Number,
         default: null
+    },
+    order: {
+        type : Number,
+        required : true
     }
 })
 
