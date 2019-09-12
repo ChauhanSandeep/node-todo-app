@@ -2,16 +2,15 @@ var mongoose = require('mongoose')
 
 var Route = mongoose.model('Route', {
     route_id: {
-        type: Number,
-        required: true
+        type: Number
     },
     sourceId: {
         type: Number,
-        required: true,
+       required: 1
     },
     destinationId: {
         type: Number,
-        required: true,
+        required: 2
     },
     groupId: {
         type : Number,
@@ -19,7 +18,7 @@ var Route = mongoose.model('Route', {
     },
     order : {
         type : Number,
-        required : true
+        required : 3
     }
 })
 

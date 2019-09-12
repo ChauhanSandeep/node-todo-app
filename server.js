@@ -14,13 +14,16 @@ app.use(bodyParser.json());
 // add new boarding point
 app.post('/boardingPoint', (req, res) => {
   console.log("Got post request for " + res);
-    var boardingPoint = new BoardingPoint({
-        bpId: req.body.bpId,
-        bpName: req.body.bpName,
-        isActive: req.body.isActive,
-        lattitude: req.body.lattitude,
-        longitude: req.body.longitude
-    })
+  var boardingPoint = new BoardingPoint({
+    bpId: req.body.bpId,
+    bpName: req.body.bpName,
+      isActive: req.body.isActive,
+      latitude:req.body.latitude,
+      longitude: req.body.longitude,
+      isHub: req.body.isHub
+
+
+  })
 
   boardingPoint.save()
       .then((doc) => {
@@ -33,17 +36,20 @@ app.post('/boardingPoint', (req, res) => {
 // add new route
 app.post('/route', (req, res) => {
   console.log("Got post request for " + res);
+  console.log(req.body.route_id,req.body.sourceId,req.body.destinationId,req.body.groupId,req.body.order)
   var route = new Route({
     route_id: req.body.route_id,
-    from : req.body.from,
-    to : req.body.to,
-    parent : req.body.parent
+    sourceId : req.body.sourceId,
+    destinationId : req.body.destinationId,
+    groupId : req.body.groupId,
+    order : req.body.order
   })
 
   route.save()
       .then((doc) => {
         res.send(doc);
       }, (error) => {
+        console.log(error)
         res.send(400).send(error);
       });
 });
@@ -72,6 +78,21 @@ app.get('/boardingpoints', (req, res) => {
   })
 });
 
+app.post('/nearestBP',(req,res)=>{
+    var lat1 =req.body.latitude
+    var lat2 =req.body.longitude
+    var bpArray =new Array();
+    var cursor=BoardingPoint.find();
+    cursor.each(function (err,bp) {
+       var distance=getDistanceBetweenPointsInMeters(lat1,lat2,bp.latitude,bp.longitude);
+        if(distance<=500){
+            bpArray.push(bp);
+        }
+    });
+
+    res.send(bpMap)
+
+});
 // get all the routes for source and destination
 app.get('/getroutes/:source/:destination', (req, res) => {
   console.log("fetching all the routes for the source and destination");
