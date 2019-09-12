@@ -1,5 +1,7 @@
 var express = require('express');
 var bodyParser = require('body-parser');
+var haversine = require('haversine-distance');
+
 // this is to validate the id in mongo and fetch the data accordingly.
 var {ObjectId} = require('mongodb');
 
@@ -80,17 +82,28 @@ app.get('/boardingpoints', (req, res) => {
 
 app.post('/nearestBP',(req,res)=>{
     var lat1 =req.body.latitude
-    var lat2 =req.body.longitude
+    var lon1 =req.body.longitude
     var bpArray =new Array();
-    var cursor=BoardingPoint.find();
-    cursor.each(function (err,bp) {
-       var distance=getDistanceBetweenPointsInMeters(lat1,lat2,bp.latitude,bp.longitude);
-        if(distance<=500){
-            bpArray.push(bp);
-        }
-    });
+    BoardingPoint.find().stream()
+        .on('data', function(doc){
+            console.log(doc)
+            var distance=getDistanceBetweenPointsInMeters(lat1,lon1,doc.latitude,doc.longitude)
+            if (500>=distance) {
+                bpArray.push(doc)
+            }
 
-    res.send(bpMap)
+        })
+        .on('error', function(err){
+            console.log(err)
+        })
+        .on('end', function(){
+            // final callback
+            res.send(bpArray)
+        });
+
+  // Promise.all([promise1]).then(result=>{
+  //
+  // });
 
 });
 // get all the routes for source and destination
@@ -137,4 +150,13 @@ app.listen(3000, () => {
 
 module.exports = {
   app
+}
+function getDistanceBetweenPointsInMeters(lat1,lon1,lat2,lon2) {
+
+    var a = { "latitude": lat1, "longitude" : lon1 }
+    var b = { "latitude":lat2, "longitude":lon2 }
+
+    return haversine(a,b)
+    console.log(haversine(a, b))
+
 }
