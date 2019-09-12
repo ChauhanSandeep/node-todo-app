@@ -14,10 +14,13 @@ app.use(bodyParser.json());
 // add new boarding point
 app.post('/boardingPoint', (req, res) => {
   console.log("Got post request for " + res);
-  var boardingPoint = new BoardingPoint({
-    bpId: req.body.bpId,
-    bpName: req.body.bpName
-  })
+    var boardingPoint = new BoardingPoint({
+        bpId: req.body.bpId,
+        bpName: req.body.bpName,
+        isActive: req.body.isActive,
+        lattitude: req.body.lattitude,
+        longitude: req.body.longitude
+    })
 
   boardingPoint.save()
       .then((doc) => {
