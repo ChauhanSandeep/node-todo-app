@@ -35,6 +35,34 @@ app.post('/boardingPoint', (req, res) => {
       });
 });
 
+
+// for <currrentlocation, List<bp>> find the <bp, eta>
+// Request:
+// {"lattitude":102,"longitude":2,"boardingPoints":[bp1, bp2]}
+// Response:
+// {"list":[{"bp":bp1,"eta":12},{"bp":bp1,"eta":15}]}
+
+app.post('/findBpEta', (req, res) => {
+    console.log("got post request to find ETA for nearby boarding points");
+    var lattitude = req.body.lattitude;
+    var longitude = req.body.longitude;
+    var boardingPoints = req.body.boardingPoints;
+
+    let array = new Array();
+
+    for(let i = 0; i < boardingPoints.length; i++){
+        let eta = findEta(lattitude, longitude, boardingPoints[i]);
+        array.push({"bp" : boardingPoints[i], "eta" : eta});
+    }
+    return res.send({"list" : [...array]});;
+
+})
+
+function findEta(lattitude, longitude, boardingPoint) {
+    let distance = getDistanceBetweenPointsInMeters(lattitude, longitude, boardingPoint.latitude, boardingPoint.longitude);
+    return Math.trunc(distance/80); // returns time in minutes
+}
+
 // add new route
 app.post('/route', (req, res) => {
   console.log("Got post request for " + res);
