@@ -532,7 +532,7 @@ app.get('/getvehicle',(req,res)=>{
             var inventory = allotedInventory[i];
             var currentVehicleLocation = await Inventory.findOne({inventoryID:inventory.inventoryId})
             console.log("vehicle:"+currentVehicleLocation)
-            var bp=BoardingPoint.findOne({bpId:bpId})
+            var bp= await BoardingPoint.findOne({bpId:bpId})
             var distance=getDistanceBetweenPointsInMeters(currentVehicleLocation.latitude,currentVehicleLocation.longitude,bp.latitude,bp.longitude);
             console.log("distance:"+distance);
             if(500<distance){
