@@ -7,6 +7,10 @@ var {ObjectId} = require('mongodb');
 
 var {BoardingPoint} = require('./models/boardingpoint');
 var {Route} = require('./models/route');
+var {RouteAllotment} = require('./models/inventory_route_allotment');
+var {User} = require('./models/user');
+var {Inventory} = require('./models/inventory');
+var {TicketRecord} = require('./models/ticketrecord');
 var {mongoose} = require('./db/mongoose');
 
 var app = express();
@@ -34,6 +38,46 @@ app.post('/boardingPoint', (req, res) => {
         res.status(400).send(error);
       });
 });
+
+// add new user
+app.post('/user', (req, res) => {
+    console.log("Got post request for user" + res);
+    var user = new User({
+        user_id: req.body.userId,
+        name: req.body.name,
+        email: req.body.email,
+        isDriver:req.body.isDriver,
+        owned_vehicle_id: req.body.ownedVehicle,
+    })
+
+    user.save()
+        .then((doc) => {
+            res.send(doc);
+        }, (error) => {
+            res.status(400).send(error);
+        });
+});
+
+//add new vehicle
+app.post('/vehicle', (req, res) => {
+    console.log("get post request for vehicle" + res);
+    var vehicle = new Inventory({
+        inventoryID: req.body.inventoryID,
+        inventoryType: req.body.inventoryType,
+        regNo: req.body.regNo,
+        seats: req.body.seats,
+        active: req.body.active,
+        latitude: req.body.latitude,
+        longitude: req.body.longitude,
+    })
+
+    vehicle.save()
+        .then((doc) => {
+            res.send(doc);
+        }, (error) => {
+            res.status(400).send(error);
+        });
+})
 
 
 // for <currrentlocation, List<bp>> find the <bp, eta>
@@ -63,6 +107,16 @@ function findEta(lattitude, longitude, boardingPoint) {
     return Math.trunc(distance/80); // returns time in minutes
 }
 
+var generateBlockKey = (length) => {
+    var result = '';
+    var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var charactersLength = characters.length;
+    for ( var i = 0; i < length; i++ ) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+}
+
 // add new route
 app.post('/route', (req, res) => {
   console.log("Got post request for " + res);
@@ -84,6 +138,7 @@ app.post('/route', (req, res) => {
         res.send(400).send(error);
       });
 });
+
 
 app.get('/test', (req, res) => {
     console.log("get bp got given id");
@@ -146,6 +201,48 @@ app.get('/test', (req, res) => {
 
 });
 
+app.post('/bookticket', (req, res) => {
+    console.log("got book request");
+    let bpId = req.body.bpId;
+    let dpId = req.body.dpId;
+    let passengerId = req.body.passengerId;
+
+
+    let routeAllotement = allocateVehicle(bpId, dpId);
+    let vehicleId = routeAllotement.inventoryID;
+    let price = routeAllotement.price;
+    let blockKey = generateBlockKey(5);
+
+
+    var ticketRecord = new TicketRecord({
+        ticket_id: 1,
+        passenger_id: passengerId,
+        vehicle_id: vehicleId,
+        source_id: bpId,
+        destination_id: dpId,
+        fare: price,
+        status:"BOOKED",
+        block_key: blockKey,
+    });
+
+    RouteAllotment.findOneAndUpdate({allotmentId: vehicleId},
+        {$inc: {availableSeats: -1}},
+        (err, response) => {
+            if (err) {
+                res.json(0);
+            } else {
+                console.log("update");
+            }
+        });
+
+    ticketRecord.save()
+        .then((doc) => {
+            res.send(doc);
+        }, (error) => {
+            console.log(error)
+            res.send(400).send(error);
+        });
+})
 
 app.get('/bpforgivenid', (req, res) => {
 console.log("get bp got given id");
@@ -171,6 +268,17 @@ res.status(400).send(error);
 });
 });
 
+//getSimulation
+app.get('/sim', (req, res) => {
+    console.log("all the routes");
+    startEglToMarathalli()
+    res.send("doing_")
+});
+
+function startEglToMarathalli() {
+
+    getDistanceBetweenPointsInMeters(12.95080, 77.63929, 12.95304, 77.64061)
+}
 // get all the routes
 app.get('/routes', (req, res) => {
   console.log("all the routes");
@@ -222,115 +330,117 @@ app.post('/nearestBP',(req,res)=>{
 
 });
 
-app.post('/dropingpointsarray',(req,res)=>{
-    var lat1 =req.body.latitude
-    var lon1 =req.body.longitude
-    var bpArray =new Array();
+app.post('/dropingpoints',(req,res)=> {
+    var lat1 = req.body.latitude
+    var lon1 = req.body.longitude
+    var bpArray = new Array();
     var respMap = new Map();
+    var flag=0;
 
-    let pormise = BoardingPoint.find().stream()
-        .on('data', function(doc){
-        //    console.log(doc)
-            var distance=getDistanceBetweenPointsInMeters(lat1,lon1,doc.latitude,doc.longitude)
-            console.log("distance from user locaton is"+distance+"for bpName:"+doc.bpName)
-            if (500>=distance) {
+
+    BoardingPoint.find().stream()
+        .on('data', function (doc) {
+            //    console.log(doc)
+            var distance = getDistanceBetweenPointsInMeters(lat1, lon1, doc.latitude, doc.longitude)
+            console.log("distance from user locaton is" + distance + "for bpName:" + doc.bpName)
+            if (500 >= distance) {
                 bpArray.push(doc)
                 //console.log(doc)
                 console.log(bpArray)
             }
 
         })
-        .on('error', function(err){
+        .on('error', function (err) {
             console.log(err)
         })
-        .on('end', function(){
+        .on('end', function () {
             // final callback
-            if(bpArray.length>0){
+            if (bpArray.length > 0) {
                 //1.Getting the groupids of the bps.
                 //2.Form groupids getting the destinations..
-                for(i=0;i<bpArray.length;i++){
-                    var bp=bpArray[i]
-                    var destIdArray =new Array();
-                    var groupIDArray =new Array();
-                    var destinations =new Array();
+                for (i = 0; i < bpArray.length; i++) {
+                    var bp = bpArray[i]
+                    var destIdArray = new Array();
+                    var groupIDArray = new Array();
+                    var destinations = new Array();
                     var order
-                    Route.find({sourceId:bp.bpId}).then((routes)=>{
+                    Route.find({sourceId: bp.bpId}).then((routes) => {
                         console.log("inside findBySourceId then...")
                         console.log("Routes:" + routes)
-                        for(i=0;i<routes.length;i++) {
-                            var route=routes[i];
-                            order=route.order
+                        for (i = 0; i < routes.length; i++) {
+                            var route = routes[i];
+                            order = route.order
                             groupIDArray.push(route.groupId);
                         }
 
-                    }).then(()=>{
+                    }).then(async () => {
                         console.log("Inside groupidarray then..")
-                        for(i=0;i<groupIDArray.length;i++){
-                            var groupId =groupIDArray[i];
-                            Route.find({groupId:groupId}).then((routes)=>{
-                                for(i=0;i<routes.length;i++) {
-                                    var route=routes[i];
+                        for (i = 0; i < groupIDArray.length; i++) {
+                            var groupId = groupIDArray[i];
+                            var routes = await Route.find({groupId: groupId})
+                                var count=0;
+                                for (i = 0; i < routes.length; i++) {
+                                    var route = routes[i];
 
-                                    if(bp.bpId==route.destinationId ||order<route.order){
+                                    if (bp.bpId == route.destinationId || order < route.order) {
                                         continue;
                                     }
 
                                     destIdArray.push(route.destinationId)
                                 }
-                            }).then(()=>{
-                                res.send(destIdArray)
-                            })
+                                for (i = 0; i < destIdArray.length; i++) {
+                                    var destId = destIdArray[i]
+                                    var doc = await BoardingPoint.findOne({bpId: destId})
+                                        destinations.push(doc)
+                                }
+
+
+
+
+                            // .then(()=>{
+                            //     for(i=0;i<destIdArray.length;i++){
+                            //         var destId=destIdArray[i]
+                            //         BoardingPoint.find({bpId:destId}).then((doc)=>{
+                            //             destinations.push(doc)
+                            //         })
+                            //     }
+                            // }).then(()=>{
+                            //     respMap.set(bp.bpId,destinations)
+                            // })
+
+
                         }
+                        respMap.set(bp.bpId,destinations)
+                        res.send({"list" : [...respMap]});
+                    })
 
-                    });
 
-
-                    // .then(()=>{
+                    // let task = new Promise((resolve, reject) => {
+                    //     let i=0;
                     //     for(i=0;i<destIdArray.length;i++){
                     //         var destId=destIdArray[i]
                     //         BoardingPoint.find({bpId:destId}).then((doc)=>{
                     //             destinations.push(doc)
                     //         })
                     //     }
-                    // }).then(()=>{
-                    //     respMap.set(bp.bpId,destinations)
+                    //     while(i < destIdArray.length){
+                    //
+                    //     }
+                    //     resolve("resolve")
+                    //     // reject("reject")
+                    // });
+                    //
+                    // let promise2 = task();
+                    //
+                    // Promise.all([promise1, promise2]).then(result => {
+                    //     respMap.set(bp.bpId,destinations);
                     // })
 
-
+                    //res.send(respMap)
                 }
 
-
-
             }
-        });
-
-
-
-
-
-
-    // let task = new Promise((resolve, reject) => {
-    //     let i=0;
-    //     for(i=0;i<destIdArray.length;i++){
-    //         var destId=destIdArray[i]
-    //         BoardingPoint.find({bpId:destId}).then((doc)=>{
-    //             destinations.push(doc)
-    //         })
-    //     }
-    //     while(i < destIdArray.length){
-    //
-    //     }
-    //     resolve("resolve")
-    //     // reject("reject")
-    // });
-    //
-    // let promise2 = task();
-    //
-    // Promise.all([promise1, promise2]).then(result => {
-    //     respMap.set(bp.bpId,destinations);
-    // })
-
-    //res.send(respMap)
+        })
 });
 
 app.post('/dropingpoint',(req,res)=>{
@@ -387,7 +497,46 @@ app.get('/getroutes/:source/:destination', (req, res) => {
 });
 
 app.listen(3000, () => {
-  console.log('webapp started on port 3000');
+  console.log('webapp started on port 30routeGroup');
+});
+
+app.get('/getvehicle',(req,res)=>{
+    var bpId=req.query.bpId
+    var dpId=req.query.dpId
+    //gettng DP group..
+    Route.findOne({destinationId:dpId}).then(async (route)=>{
+        console.log(route)
+        // getting all the alloted vehicles for that route..
+        var allotedInventory=await RouteAllotment.find({routeGroup:route.groupId})
+        for(i=0;i<allotedInventory.length;i++){
+            var inventory = allotedInventory[i]
+            var currentVehicleLocation = await Inventory.findOne({inventoryID:inventory.inventoryId})
+            console.log(currentVehicleLocation)
+
+        }
+    })
+});
+
+app.post('/routeallotment', (req, res) => {
+    console.log("Got post request for " + res);
+    console.log(req.body.route_id,req.body.sourceId,req.body.destinationId,req.body.groupId,req.body.order)
+    var routeAllotment = new RouteAllotment({
+        allotmentId: req.body.allotmentId,
+        routeGroup : req.body.routeGroup,
+        inventoryId : req.body.inventoryId,
+        startTime : req.body.startTime,
+        endTime : req.body.endTime,
+        availableSeats : req.body.availableSeats
+
+    })
+
+    routeAllotment.save()
+        .then((doc) => {
+            res.send(doc);
+        }, (error) => {
+            console.log(error)
+            res.send(400).send(error);
+        });
 });
 
 module.exports = {
@@ -397,9 +546,9 @@ function getDistanceBetweenPointsInMeters(lat1,lon1,lat2,lon2) {
 
     var a = { "latitude": lat1, "longitude" : lon1 }
     var b = { "latitude":lat2, "longitude":lon2 }
-
-    return haversine(a,b)
     console.log(haversine(a, b))
+    return haversine(a,b)
+
 
 }
 
@@ -416,5 +565,10 @@ function allocateVehicle(bpId,dpId,seats){
     // 2) get all the vehicles(inventory) running on above groupId from inventory_route_allotment table with available seats >= seats
     // 3) get current location of all above vehicle
     // check get first vehicle
+
+    return {
+        price : 10,
+        inventoryID : 1
+    }
 
 }

@@ -26,8 +26,16 @@ var Inventory = mongoose.model('Inventory',{
         default : false
     },
     userId : {
-        type : Number,
-        required : true
+        type: Number,
+        required: true
+    },
+    latitude: {
+        type: Number,
+        required: false
+    },
+    longitude: {
+        type: Number,
+        required: false
     }
 })
 
