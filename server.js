@@ -96,6 +96,24 @@ app.get('/routes', (req, res) => {
   });
 });
 
+
+app.get('/bpforgivenid', (req, res) => {
+    console.log("get bp got given id");
+    let id=req.query.id
+    BoardingPoint.find().then((bps) => {
+        for(let i=0;i<bps.length ; i++){
+            if(bps[i].bpId == id){
+                res.send(bps[i])
+                break;
+            }
+        }
+    }, (error) => {
+        console.log("error occured while fetching boarding point for given id");
+        res.status(400).send(error);
+    });
+});
+
+
 // get all the boarding points
 app.get('/boardingpoints', (req, res) => {
   console.log("fetch all the boarding points");
