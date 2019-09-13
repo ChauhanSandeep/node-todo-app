@@ -250,11 +250,11 @@ app.post('/bookticket', (req, res) => {
 
 app.get('/bpforgivenid', (req, res) => {
 console.log("get bp got given id");
-    let routes = Route.find({sourceId:bpID})
-        .then((routes) => {
-            console.log(routes);
-        })
-    let x =0;
+    // let routes = Route.find({sourceId:bpID})
+    //     .then((routes) => {
+    //         console.log(routes);
+    //     })
+    // let x =0;
 
 let temp=Route.find({})
 
@@ -426,7 +426,7 @@ app.get('/dropingpoints',(req,res)=> {
                                 for (i = 0; i < routes.length; i++) {
                                     var route = routes[i];
 
-                                    if (bp.bpId == route.destinationId || order < route.order) {
+                                    if (bp.bpId == route.destinationId || order > route.order) {
                                         continue;
                                     }
 
