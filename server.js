@@ -72,7 +72,8 @@ app.post('/route', (req, res) => {
     sourceId : req.body.sourceId,
     destinationId : req.body.destinationId,
     groupId : req.body.groupId,
-    order : req.body.order
+    order : req.body.order,
+    fare : req.body.fare
   })
 
   route.save()
@@ -84,8 +85,78 @@ app.post('/route', (req, res) => {
       });
 });
 
+app.get('/test', (req, res) => {
+    console.log("get bp got given id");
+    let bpId = 5
+    let dpId = 6
+
+    let srcSet = new Set()
+    let destSet = new Set()
+    let finalSet = new Set()
+
+
+    // find all groupId where sourceId=bpId
+    let promise1 =
+        Route.find({sourceId: bpId})
+            .then(async(a) => {
+                for (let i = 0; i < routes.length; i++) {
+                   await srcSet.add(routes[i].groupId)
+                }
+            })
+
+
+            /*.then( async () => {
+
+            Route.find({destinationId: dpId})
+                .then(async (srcSet) => {
+                    for (let i = 0; i < routes.length; i++) {
+                        await destSet.add(routes[i].groupId)
+                    }
+                }).then( async () => {
+
+                console.log(srcSet);
+                console.log(destSet);
+
+                for(let i=0;i<srcSet.length;i++) {
+                    if (destSet.contains(srcSet[i])) {
+                        finalSet.add(srcSet[i])
+                    }
+                }
+            })
+
+        });
+
+
+
+
+    // find all routes with above groupId , search dest:dpId
+
+
+
+     /*   for (let i = 0; i < grpSet.length; i++) {
+            let routes = Route.find({$and: [{destinationId: dpId}, {groupId: grpSet[i]}]})
+                .then((routes) => {
+                    for (let i = 0; i < routes.length; i++) {
+                        finalSet.add(routes[i].groupId)
+                    }
+                });
+        } */
+        res.send(srcSet)
+
+
+});
+
+
 app.get('/bpforgivenid', (req, res) => {
 console.log("get bp got given id");
+    let routes = Route.find({sourceId:bpID})
+        .then((routes) => {
+            console.log(routes);
+        })
+    let x =0;
+
+let temp=Route.find({})
+
 let id=req.query.id
 BoardingPoint.find().then((bps) => {
 for(let i=0;i<bps.length ; i++){
@@ -332,10 +403,18 @@ function getDistanceBetweenPointsInMeters(lat1,lon1,lat2,lon2) {
 
 }
 
+function getUniqueGroups(bpId,dpId){
+   // console.log(Route.find({bpID:bpID, dpID : dpID}))
+    // let temp=Route.find({})
 
-function allocateVehicle(bp,dp,seats){
-    // get all the vehicles running from bp to dp which are active having seats availability.
-    // get current location of all vehicle
+
+}
+
+function allocateVehicle(bpId,dpId,seats){
+
+    // 1 )get all the unique groupId from Routs table from given bp to dp,
+    // 2) get all the vehicles(inventory) running on above groupId from inventory_route_allotment table with available seats >= seats
+    // 3) get current location of all above vehicle
     // check get first vehicle
 
 }

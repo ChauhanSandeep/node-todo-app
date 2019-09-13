@@ -20,6 +20,14 @@ var Inventory = mongoose.model('Inventory',{
     active : {
         type : Boolean,
         default : true
+    },
+    isBookable : {
+        type : Boolean,
+        default : false
+    },
+    userId : {
+        type : Number,
+        required : true
     }
 })
 
