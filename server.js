@@ -197,6 +197,17 @@ res.status(400).send(error);
 });
 });
 
+//getSimulation
+app.get('/sim', (req, res) => {
+    console.log("all the routes");
+    startEglToMarathalli()
+    res.send("doing_")
+});
+
+function startEglToMarathalli() {
+
+    getDistanceBetweenPointsInMeters(12.95080, 77.63929, 12.95304, 77.64061)
+}
 // get all the routes
 app.get('/routes', (req, res) => {
   console.log("all the routes");
@@ -464,9 +475,9 @@ function getDistanceBetweenPointsInMeters(lat1,lon1,lat2,lon2) {
 
     var a = { "latitude": lat1, "longitude" : lon1 }
     var b = { "latitude":lat2, "longitude":lon2 }
-
-    return haversine(a,b)
     console.log(haversine(a, b))
+    return haversine(a,b)
+
 
 }
 
