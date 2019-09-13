@@ -19,6 +19,11 @@ var Route = mongoose.model('Route', {
     order : {
         type : Number,
         required : true
+    },
+    fare : {
+        type : Number,
+        required : true,
+        default: 0
     }
 })
 

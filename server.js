@@ -112,24 +112,6 @@ app.get('/routes', (req, res) => {
   });
 });
 
-
-app.get('/bpforgivenid', (req, res) => {
-    console.log("get bp got given id");
-    let id=req.query.id
-    BoardingPoint.find().then((bps) => {
-        for(let i=0;i<bps.length ; i++){
-            if(bps[i].bpId == id){
-                res.send(bps[i])
-                break;
-            }
-        }
-    }, (error) => {
-        console.log("error occured while fetching boarding point for given id");
-        res.status(400).send(error);
-    });
-});
-
-
 // get all the boarding points
 app.get('/boardingpoints', (req, res) => {
   console.log("fetch all the boarding points");
@@ -347,5 +329,13 @@ function getDistanceBetweenPointsInMeters(lat1,lon1,lat2,lon2) {
 
     return haversine(a,b)
     console.log(haversine(a, b))
+
+}
+
+
+function allocateVehicle(bp,dp,seats){
+    // get all the vehicles running from bp to dp which are active having seats availability.
+    // get current location of all vehicle
+    // check get first vehicle
 
 }
