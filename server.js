@@ -7,6 +7,10 @@ var {ObjectId} = require('mongodb');
 
 var {BoardingPoint} = require('./models/boardingpoint');
 var {Route} = require('./models/route');
+var {RouteAllotment} = require('./models/inventory_route_allotment');
+var {User} = require('./models/user');
+var {Inventory} = require('./models/inventory');
+var {TicketRecord} = require('./models/ticketrecord');
 var {mongoose} = require('./db/mongoose');
 
 var app = express();
@@ -34,6 +38,46 @@ app.post('/boardingPoint', (req, res) => {
         res.status(400).send(error);
       });
 });
+
+// add new user
+app.post('/user', (req, res) => {
+    console.log("Got post request for user" + res);
+    var user = new User({
+        user_id: req.body.userId,
+        name: req.body.name,
+        email: req.body.email,
+        isDriver:req.body.isDriver,
+        owned_vehicle_id: req.body.ownedVehicle,
+    })
+
+    user.save()
+        .then((doc) => {
+            res.send(doc);
+        }, (error) => {
+            res.status(400).send(error);
+        });
+});
+
+//add new vehicle
+app.post('/vehicle', (req, res) => {
+    console.log("get post request for vehicle" + res);
+    var vehicle = new Inventory({
+        inventoryID: req.body.inventoryID,
+        inventoryType: req.body.inventoryType,
+        regNo: req.body.regNo,
+        seats: req.body.seats,
+        active: req.body.active,
+        latitude: req.body.latitude,
+        longitude: req.body.longitude,
+    })
+
+    vehicle.save()
+        .then((doc) => {
+            res.send(doc);
+        }, (error) => {
+            res.status(400).send(error);
+        });
+})
 
 
 // for <currrentlocation, List<bp>> find the <bp, eta>
@@ -63,6 +107,16 @@ function findEta(lattitude, longitude, boardingPoint) {
     return Math.trunc(distance/80); // returns time in minutes
 }
 
+var generateBlockKey = (length) => {
+    var result = '';
+    var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    var charactersLength = characters.length;
+    for ( var i = 0; i < length; i++ ) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+}
+
 // add new route
 app.post('/route', (req, res) => {
   console.log("Got post request for " + res);
@@ -83,6 +137,49 @@ app.post('/route', (req, res) => {
         res.send(400).send(error);
       });
 });
+
+app.post('/bookticket', (req, res) => {
+    console.log("got book request");
+    let bpId = req.body.bpId;
+    let dpId = req.body.dpId;
+    let passengerId = req.body.passengerId;
+
+
+    let routeAllotement = allocateVehicle(bpId, dpId);
+    let vehicleId = routeAllotement.inventoryID;
+    let price = routeAllotement.price;
+    let blockKey = generateBlockKey(5);
+
+
+    var ticketRecord = new TicketRecord({
+        ticket_id: 1,
+        passenger_id: passengerId,
+        vehicle_id: vehicleId,
+        source_id: bpId,
+        destination_id: dpId,
+        fare: price,
+        status:"BOOKED",
+        block_key: blockKey,
+    });
+
+    RouteAllotment.findOneAndUpdate({allotmentId: vehicleId},
+        {$inc: {availableSeats: -1}},
+        (err, response) => {
+            if (err) {
+                res.json(0);
+            } else {
+                console.log("update");
+            }
+        });
+
+    ticketRecord.save()
+        .then((doc) => {
+            res.send(doc);
+        }, (error) => {
+            console.log(error)
+            res.send(400).send(error);
+        });
+})
 
 app.get('/bpforgivenid', (req, res) => {
 console.log("get bp got given id");
@@ -378,5 +475,10 @@ function allocateVehicle(bp,dp,seats){
     // get all the vehicles running from bp to dp which are active having seats availability.
     // get current location of all vehicle
     // check get first vehicle
+
+    return {
+        price : 10,
+        inventoryID : 1
+    }
 
 }
