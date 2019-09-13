@@ -20,6 +20,14 @@ var Inventory = mongoose.model('Inventory',{
     active : {
         type : Boolean,
         default : true
+    },
+    latititude: {
+        type: Number,
+        required: false
+    },
+    longitude: {
+        type: Number,
+        required: false
     }
 })
 
