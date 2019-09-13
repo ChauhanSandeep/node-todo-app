@@ -21,7 +21,7 @@ var Inventory = mongoose.model('Inventory',{
         type : Boolean,
         default : true
     },
-    latititude: {
+    latitude: {
         type: Number,
         required: false
     },
