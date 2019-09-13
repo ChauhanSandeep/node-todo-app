@@ -6,11 +6,11 @@ var Route = mongoose.model('Route', {
     },
     sourceId: {
         type: Number,
-       required: 1
+       required: true
     },
     destinationId: {
         type: Number,
-        required: 2
+        required: true
     },
     groupId: {
         type : Number,
@@ -18,7 +18,7 @@ var Route = mongoose.model('Route', {
     },
     order : {
         type : Number,
-        required : 3
+        required : true
     }
 })
 
