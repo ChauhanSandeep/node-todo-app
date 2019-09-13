@@ -140,66 +140,80 @@ app.post('/route', (req, res) => {
 });
 
 
-app.get('/test', (req, res) => {
+app.get('/test', async (req, res) => {
     console.log("get bp got given id");
-    let bpId = 5
-    let dpId = 6
-
     let srcSet = new Set()
     let destSet = new Set()
+    let grpSet=new Set()
     let finalSet = new Set()
+    let vehicleSet=new Set()
+
+    var bpId=req.query.bpId
+    var dpId=req.query.dpId
+    var seats=req.query.seats
 
 
-    // find all groupId where sourceId=bpId
-    let promise1 =
-        Route.find({sourceId: bpId})
-            .then(async(a) => {
-                for (let i = 0; i < routes.length; i++) {
-                   await srcSet.add(routes[i].groupId)
-                }
-            })
+    //gettng DP group..
+    var route=  await Route.find({destinationId:dpId})
+        console.log(route)
+        // getting all the alloted vehicles for that route..
+        for(let i=0;i<route.length;i++) {
+            grpSet.add(route[i].groupId)
+        }
+        console.log(grpSet)
+       // let grpArr= grpSet.toArray();
+
+        for(var tm of grpSet) {
+
+           var arts = await Route.find({$and: [{sourceId: bpId}, {groupId: tm}]})
+            console.log("chutta de do");
+
+            for(let i=0;i<arts.length;i++){
+                finalSet.add(arts[i].groupId)
+            }
+        }
+
+        // alll routeId fro given bp  Dp
+        console.log(finalSet)
+
+    // find all records in inventory_route_Allotment which has grpid = finalSet , fetch inventoryid for all.
+    for(var tm of finalSet) {
+        //
+        var invent_route=  await RouteAllotment.find({$and :[{routeGroup:tm},{availableSeats:{$gte:seats}}]})
+        for(let i=0;i<invent_route.length;i++){
+            vehicleSet.add(invent_route[i].inventoryId)
+        }
+
+    }
+
+    console.log(vehicleSet)
+
+    // for each vehicle , find all the bp which are ahead given bp.
+    // 1) so find all the bp ahead of givenBp in finalSet
+    // 2)
+    var bpLatLong=  await BoardingPoint.findOne({bpId:bpId})
+    var min =10000000
+    var allocVehicle=0
+    for (var vehicle of vehicleSet){
+        var vehicleLatLong= await Inventory.findOne({inventoryID:bpId})
+
+        var distance=getDistanceBetweenPointsInMeters(vehicleLatLong.latitude,vehicleLatLong.longitude,bpLatLong.latitude,bpLatLong.longitude)
+        if(distance < min){
+            min=distance
+            allocVehicle=vehicle
+        }
+    }
+
+    console.log(allocVehicle)
+
+    return {
+        prise : 10,
+        inventoryId : allocVehicle
+    }
+    // filter all the vehicels in vehicleSet,
 
 
-            /*.then( async () => {
-
-            Route.find({destinationId: dpId})
-                .then(async (srcSet) => {
-                    for (let i = 0; i < routes.length; i++) {
-                        await destSet.add(routes[i].groupId)
-                    }
-                }).then( async () => {
-
-                console.log(srcSet);
-                console.log(destSet);
-
-                for(let i=0;i<srcSet.length;i++) {
-                    if (destSet.contains(srcSet[i])) {
-                        finalSet.add(srcSet[i])
-                    }
-                }
-            })
-
-        });
-
-
-
-
-    // find all routes with above groupId , search dest:dpId
-
-
-
-     /*   for (let i = 0; i < grpSet.length; i++) {
-            let routes = Route.find({$and: [{destinationId: dpId}, {groupId: grpSet[i]}]})
-                .then((routes) => {
-                    for (let i = 0; i < routes.length; i++) {
-                        finalSet.add(routes[i].groupId)
-                    }
-                });
-        } */
-        res.send(srcSet)
-
-
-});
+    });
 
 app.post('/bookticket', (req, res) => {
     console.log("got book request");
