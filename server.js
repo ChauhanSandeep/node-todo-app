@@ -211,8 +211,12 @@ app.post('/bookticket', (req, res) => {
     let dpId = req.body.dpId;
     let passengerId = req.body.passengerId;
 
+    let routeAllotement = null;
+    routeAllotement = allocateVehicle(bpId, dpId);
+    while(routeAllotement == null){
+        // console.log("waiting")
+    }
 
-    let routeAllotement = allocateVehicle(bpId, dpId);
     let vehicleId = routeAllotement.inventoryID;
     let price = routeAllotement.price;
     let blockKey = generateBlockKey(5);
@@ -630,6 +634,8 @@ function allocateVehicle(bpId,dpId,seats){
     // 3) get current location of all above vehicle
     // check get first vehicle
 
+    var waitTill = new Date(new Date().getTime() + 5 * 1000);
+    while(waitTill > new Date()){}
     return {
         price : 10,
         inventoryID : 1
