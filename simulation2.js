@@ -3,7 +3,6 @@ var haversine = require('haversine-distance');
 console.log("Simulation started")
 //startEglToMarathalli()
 //testing()
-startEglToMarathalli()
 
 function startEglToMarathalli() {
 

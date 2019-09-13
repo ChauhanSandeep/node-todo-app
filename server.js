@@ -4,7 +4,7 @@ var haversine = require('haversine-distance');
 
 // this is to validate the id in mongo and fetch the data accordingly.
 var {ObjectId} = require('mongodb');
-
+var {PathSimulation} = require('./models/pathsimulation');
 var {BoardingPoint} = require('./models/boardingpoint');
 var {Route} = require('./models/route');
 var {RouteAllotment} = require('./models/inventory_route_allotment');
@@ -12,6 +12,10 @@ var {User} = require('./models/user');
 var {Inventory} = require('./models/inventory');
 var {TicketRecord} = require('./models/ticketrecord');
 var {mongoose} = require('./db/mongoose');
+
+var{RouteAllotment} =require ('./models/inventory_route_allotment');
+
+var{Inventory} =require ('./models/inventory.js');
 
 var app = express();
 
@@ -221,8 +225,12 @@ app.post('/bookticket', (req, res) => {
     let dpId = req.body.dpId;
     let passengerId = req.body.passengerId;
 
+    let routeAllotement = null;
+    routeAllotement = allocateVehicle(bpId, dpId);
+    while(routeAllotement == null){
+        // console.log("waiting")
+    }
 
-    let routeAllotement = allocateVehicle(bpId, dpId);
     let vehicleId = routeAllotement.inventoryID;
     let price = routeAllotement.price;
     let blockKey = generateBlockKey(5);
@@ -260,11 +268,11 @@ app.post('/bookticket', (req, res) => {
 
 app.get('/bpforgivenid', (req, res) => {
 console.log("get bp got given id");
-    let routes = Route.find({sourceId:bpID})
-        .then((routes) => {
-            console.log(routes);
-        })
-    let x =0;
+    // let routes = Route.find({sourceId:bpID})
+    //     .then((routes) => {
+    //         console.log(routes);
+    //     })
+    // let x =0;
 
 let temp=Route.find({})
 
@@ -291,7 +299,44 @@ app.get('/sim', (req, res) => {
 
 function startEglToMarathalli() {
 
-    getDistanceBetweenPointsInMeters(12.95080, 77.63929, 12.95304, 77.64061)
+    // getDistanceBetweenPointsInMeters(12.95080, 77.63929, 12.95304, 77.64061)
+
+
+    var latlong ="12.95080,77.63929;12.95304,77.64061;12.95444,77.64125;12.96087,77.64170;12.96127,77.64157;12.96137,77.64105;12.96081,77.64101;12.95962,77.65090;12.95911,77.65967;12.95936,77.66142;12.95821,77.66763;12.95791,77.67222;12.95446,77.68039;12.95516,77.68790;12.95663,77.69628;12.95650,77.69578;12.95616,77.69585;12.95514,77.70047;12.95683,77.70091;12.95703,77.69935;"
+    var  latLongArray = latlong.split(";")
+    var delayInSec = 5
+
+    for (var i=0 ;i<latLongArray.length; i++ ){
+
+        var finalLatLongArray = latLongArray[i].split(",");
+        var vehicleIdToUpdate = 1; // vehicle id for which lat long will be updated
+        var waitTill = new Date(new Date().getTime() + delayInSec * 1000);
+        while(waitTill > new Date()){}
+        pushToMongo(finalLatLongArray, vehicleIdToUpdate)
+
+    }
+}
+
+function pushToMongo(finalLatLongArray, vehicleId){
+
+    var pathSimulation = new PathSimulation({
+        lat: finalLatLongArray[0],
+        lon: finalLatLongArray[1],
+    });
+
+    Inventory.findOneAndUpdate({inventoryID: vehicleId},
+        { "$set": {"latitude" : finalLatLongArray[0] , "longitude" : finalLatLongArray[1]}}
+    ).exec(function(err, book){
+        if(err) {
+            console.log(err);
+            console.log("ERROR");
+        } else {
+            console.log("success");
+            console.log(finalLatLongArray[0]+" , "+finalLatLongArray[1]);
+        }
+    });
+
+
 }
 // get all the routes
 app.get('/routes', (req, res) => {
@@ -344,9 +389,12 @@ app.post('/nearestBP',(req,res)=>{
 
 });
 
-app.post('/dropingpoints',(req,res)=> {
-    var lat1 = req.body.latitude
-    var lon1 = req.body.longitude
+app.get('/dropingpoints',(req,res)=> {
+    console.log("inside droping..")
+    var lat1 = req.query.latitude
+    var lon1 = req.query.longitude
+
+    console.log("lat:"+lat1+"long:"+lon1)
     var bpArray = new Array();
     var respMap = new Map();
     var flag=0;
@@ -396,7 +444,7 @@ app.post('/dropingpoints',(req,res)=> {
                                 for (i = 0; i < routes.length; i++) {
                                     var route = routes[i];
 
-                                    if (bp.bpId == route.destinationId || order < route.order) {
+                                    if (bp.bpId == route.destinationId || order > route.order) {
                                         continue;
                                     }
 
@@ -405,7 +453,8 @@ app.post('/dropingpoints',(req,res)=> {
                                 for (i = 0; i < destIdArray.length; i++) {
                                     var destId = destIdArray[i]
                                     var doc = await BoardingPoint.findOne({bpId: destId})
-                                        destinations.push(doc)
+                                    doc["boardingpId"] = bp.bpId
+                                        destinations.push({"bpid":bp.bpId, "dest":doc})
                                 }
 
 
@@ -424,8 +473,9 @@ app.post('/dropingpoints',(req,res)=> {
 
 
                         }
-                        respMap.set(bp.bpId,destinations)
-                        res.send({"list" : [...respMap]});
+                      //  respMap.set(bp.bpId,destinations)
+                        console.log("Response is ")
+                        res.send(destinations);
                     })
 
 
@@ -453,19 +503,21 @@ app.post('/dropingpoints',(req,res)=> {
                     //res.send(respMap)
                 }
 
+            }else {
+                res.send(new Array())
             }
         })
 });
 
-app.post('/dropingpoint',(req,res)=>{
-   var destIdArray =req.body.destIdArray
-    for(i=0;i<destIdArray.length;i++){
-                var destId=destIdArray[i]
-                BoardingPoint.find({bpId:destId}).then((doc)=>{
-                    destinations.push(doc)
-                })
-            }
-})
+// app.post('/dropingpoint',(req,res)=>{
+//    var destIdArray =req.body.destIdArray
+//     for(i=0;i<destIdArray.length;i++){
+//                 var destId=destIdArray[i]
+//                 BoardingPoint.find({bpId:destId}).then((doc)=>{
+//                     destinations.push(doc)
+//                 })
+//             }
+// })
 
 
 
@@ -511,23 +563,39 @@ app.get('/getroutes/:source/:destination', (req, res) => {
 });
 
 app.listen(3000, () => {
-  console.log('webapp started on port 30routeGroup');
+  console.log('webapp started on port 3000');
 });
 
 app.get('/getvehicle',(req,res)=>{
     var bpId=req.query.bpId
     var dpId=req.query.dpId
+    var serviceArray =new Array();
+    var groupId;
     //gettng DP group..
-    Route.findOne({destinationId:dpId}).then(async (route)=>{
-        console.log(route)
+    Route.find({destinationId:dpId}).then(async (routes)=>{
+        console.log(routes)
+        for(i=0;i<routes.length;i++){
+            var route=routes[i]
+            if(route.sourceId==bpId){
+                groupId=route.groupId;
+                break;
+            }
+        }
         // getting all the alloted vehicles for that route..
-        var allotedInventory=await RouteAllotment.find({routeGroup:route.groupId})
+        var allotedInventory=await RouteAllotment.find({routeGroup:groupId})
         for(i=0;i<allotedInventory.length;i++){
-            var inventory = allotedInventory[i]
+            var inventory = allotedInventory[i];
             var currentVehicleLocation = await Inventory.findOne({inventoryID:inventory.inventoryId})
-            console.log(currentVehicleLocation)
+            console.log("vehicle:"+currentVehicleLocation)
+            var bp= await BoardingPoint.findOne({bpId:bpId})
+            var distance=getDistanceBetweenPointsInMeters(currentVehicleLocation.latitude,currentVehicleLocation.longitude,bp.latitude,bp.longitude);
+            console.log("distance:"+distance);
+            if(500<distance){
+                serviceArray.push(currentVehicleLocation)
+            }
 
         }
+        res.send(serviceArray);
     })
 });
 
@@ -580,6 +648,8 @@ function allocateVehicle(bpId,dpId,seats){
     // 3) get current location of all above vehicle
     // check get first vehicle
 
+    var waitTill = new Date(new Date().getTime() + 5 * 1000);
+    while(waitTill > new Date()){}
     return {
         price : 10,
         inventoryID : 1
