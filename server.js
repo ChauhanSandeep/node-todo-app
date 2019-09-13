@@ -13,6 +13,10 @@ var {Inventory} = require('./models/inventory');
 var {TicketRecord} = require('./models/ticketrecord');
 var {mongoose} = require('./db/mongoose');
 
+var{RouteAllotment} =require ('./models/inventory_route_allotment');
+
+var{Inventory} =require ('./models/inventory.js');
+
 var app = express();
 
 app.use(bodyParser.json());
@@ -330,9 +334,12 @@ app.post('/nearestBP',(req,res)=>{
 
 });
 
-app.post('/dropingpoints',(req,res)=> {
-    var lat1 = req.body.latitude
-    var lon1 = req.body.longitude
+app.get('/dropingpoints',(req,res)=> {
+    console.log("inside droping..")
+    var lat1 = req.query.latitude
+    var lon1 = req.query.longitude
+
+    console.log("lat:"+lat1+"long:"+lon1)
     var bpArray = new Array();
     var respMap = new Map();
     var flag=0;
@@ -391,7 +398,8 @@ app.post('/dropingpoints',(req,res)=> {
                                 for (i = 0; i < destIdArray.length; i++) {
                                     var destId = destIdArray[i]
                                     var doc = await BoardingPoint.findOne({bpId: destId})
-                                        destinations.push(doc)
+                                    doc["boardingpId"] = bp.bpId
+                                        destinations.push({"bpid":bp.bpId, "dest":doc})
                                 }
 
 
@@ -410,8 +418,9 @@ app.post('/dropingpoints',(req,res)=> {
 
 
                         }
-                        respMap.set(bp.bpId,destinations)
-                        res.send({"list" : [...respMap]});
+                      //  respMap.set(bp.bpId,destinations)
+                        console.log("Response is ")
+                        res.send(destinations);
                     })
 
 
@@ -439,19 +448,21 @@ app.post('/dropingpoints',(req,res)=> {
                     //res.send(respMap)
                 }
 
+            }else {
+                res.send(new Array())
             }
         })
 });
 
-app.post('/dropingpoint',(req,res)=>{
-   var destIdArray =req.body.destIdArray
-    for(i=0;i<destIdArray.length;i++){
-                var destId=destIdArray[i]
-                BoardingPoint.find({bpId:destId}).then((doc)=>{
-                    destinations.push(doc)
-                })
-            }
-})
+// app.post('/dropingpoint',(req,res)=>{
+//    var destIdArray =req.body.destIdArray
+//     for(i=0;i<destIdArray.length;i++){
+//                 var destId=destIdArray[i]
+//                 BoardingPoint.find({bpId:destId}).then((doc)=>{
+//                     destinations.push(doc)
+//                 })
+//             }
+// })
 
 
 
@@ -497,23 +508,39 @@ app.get('/getroutes/:source/:destination', (req, res) => {
 });
 
 app.listen(3000, () => {
-  console.log('webapp started on port 30routeGroup');
+  console.log('webapp started on port 3000');
 });
 
 app.get('/getvehicle',(req,res)=>{
     var bpId=req.query.bpId
     var dpId=req.query.dpId
+    var serviceArray =new Array();
+    var groupId;
     //gettng DP group..
-    Route.findOne({destinationId:dpId}).then(async (route)=>{
-        console.log(route)
+    Route.find({destinationId:dpId}).then(async (routes)=>{
+        console.log(routes)
+        for(i=0;i<routes.length;i++){
+            var route=routes[i]
+            if(route.sourceId==bpId){
+                groupId=route.groupId;
+                break;
+            }
+        }
         // getting all the alloted vehicles for that route..
-        var allotedInventory=await RouteAllotment.find({routeGroup:route.groupId})
+        var allotedInventory=await RouteAllotment.find({routeGroup:groupId})
         for(i=0;i<allotedInventory.length;i++){
-            var inventory = allotedInventory[i]
+            var inventory = allotedInventory[i];
             var currentVehicleLocation = await Inventory.findOne({inventoryID:inventory.inventoryId})
-            console.log(currentVehicleLocation)
+            console.log("vehicle:"+currentVehicleLocation)
+            var bp=BoardingPoint.findOne({bpId:bpId})
+            var distance=getDistanceBetweenPointsInMeters(currentVehicleLocation.latitude,currentVehicleLocation.longitude,bp.latitude,bp.longitude);
+            console.log("distance:"+distance);
+            if(500<distance){
+                serviceArray.push(currentVehicleLocation)
+            }
 
         }
+        res.send(serviceArray);
     })
 });
 
